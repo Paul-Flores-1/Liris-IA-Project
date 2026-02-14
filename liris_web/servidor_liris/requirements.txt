@@ -1,0 +1,6 @@
+flask
+flask-cors
+firebase-admin
+google-cloud-aiplatform
+google-auth
+mercadopago

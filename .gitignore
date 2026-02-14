@@ -1,0 +1,20 @@
+# Ignorar carpetas de entornos virtuales y librerias
+venv/
+env/
+.env
+__pycache__/
+*.pyc
+*.log
+*.mp4
+*.exe
+*.dll
+*.bin
+*.h5
+*.ckpt
+saved_model/
+modelo_google_t5/
+*.json
+key.json
+serviceAccountKey.json
+tf_model.h5
+BASE DE DATOS/pgAdmin 4/
