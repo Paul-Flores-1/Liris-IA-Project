@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async'; // Necesario para StreamSubscription
+
 import '../models/perfume.dart';
 
 class FavoritesProvider extends ChangeNotifier {
   String? _userId;
   final List<Perfume> _favorites = [];
-  var _subscription;
+  
+  // Solución a la advertencia azul: Le damos un tipo explícito en lugar de "var"
+  StreamSubscription<QuerySnapshot>? _subscription;
 
   FavoritesProvider(this._userId) {
     if (_userId != null) {
@@ -20,7 +24,7 @@ class FavoritesProvider extends ChangeNotifier {
     if (_userId == null) {
       throw Exception("No hay usuario autenticado");
     }
-   
+    
     return FirebaseFirestore.instance
         .collection('usuarios') 
         .doc(_userId!)
@@ -48,9 +52,6 @@ class FavoritesProvider extends ChangeNotifier {
     _subscription = _userFavoritesCollection.snapshots().listen((snapshot) {
       _favorites.clear();
       
-      // ¡AQUÍ ESTÁ EL TRUCO! 
-      // Como guardamos todos los datos, los leemos directamente.
-      // Ya no hace falta la segunda consulta con 'whereIn'.
       for (var doc in snapshot.docs) {
         try {
           _favorites.add(Perfume.fromFirestore(doc));
@@ -73,19 +74,17 @@ class FavoritesProvider extends ChangeNotifier {
     if (_favorites.any((fav) => fav.id == perfume.id)) return;
 
     try {
-      // Guardamos TODOS los datos del perfume en la subcolección
+      // Guardamos los datos con la NUEVA estructura del modelo
       await _userFavoritesCollection.doc(perfume.id).set({
         'id': perfume.id,
         'nombre': perfume.nombre,
         'marca': perfume.marca,
         'precio': perfume.precio,
-        'tipo': perfume.tipo,
-        'clima_ideal': perfume.clima,
-        'notas': perfume.notas,
-        'imagen_url': perfume.imagenUrl, // Asegúrate que coincida con tu modelo
+        'imagen_url': perfume.imagenUrl,
         'sexo': perfume.sexo,
-        'tamano': perfume.tamano, // Sin ñ
-        'timestamp': FieldValue.serverTimestamp(), // Para ordenar si quisieras
+        'ml': perfume.ml, // Campo nuevo
+        'notas_olfativas': perfume.notasOlfativas, // Campo nuevo
+        'timestamp': FieldValue.serverTimestamp(), 
       });
     } catch (e) {
       debugPrint("Error al añadir favorito: $e");
@@ -112,19 +111,14 @@ class FavoritesProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
-      // 1. Obtenemos todos los documentos de la colección
       final snapshot = await _userFavoritesCollection.get();
-      
-      // 2. Usamos un "Batch" para borrarlos todos de una vez (es más eficiente)
       WriteBatch batch = FirebaseFirestore.instance.batch();
       
       for (var doc in snapshot.docs) {
         batch.delete(doc.reference);
       }
 
-      // 3. Ejecutamos el borrado
       await batch.commit();
-      
       
     } catch (e) {
       debugPrint("Error al limpiar favoritos: $e");

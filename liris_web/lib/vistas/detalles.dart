@@ -20,7 +20,7 @@ class DetallesView extends StatefulWidget {
 class _DetallesViewState extends State<DetallesView> {
   bool _estaPagando = false;
 
-  // --- MÉTODO DE PAGO MEJORADO ---
+  // --- MÉTODO DE PAGO ---
   Future<void> _iniciarPago() async {
     setState(() {
       _estaPagando = true;
@@ -102,6 +102,7 @@ class _DetallesViewState extends State<DetallesView> {
           ElevatedButton(
             onPressed: () async {
               await launchUrl(uri, mode: LaunchMode.externalApplication);
+              // ignore: use_build_context_synchronously
               Navigator.pop(ctx);
             },
             child: const Text('Abrir Link'),
@@ -117,7 +118,7 @@ class _DetallesViewState extends State<DetallesView> {
     );
   }
 
-  // --- NUEVO CONTENIDO DE DETALLES (SIN ACORDEÓN) ---
+  // --- CONTENIDO DE DETALLES ---
   Widget _buildDetailsContent(BuildContext context, Color colorTexto,
       Color colorDorado, Color colorGrisSuave, Color colorSuperficie) {
     
@@ -128,7 +129,6 @@ class _DetallesViewState extends State<DetallesView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // MARCA
           Text(
             widget.perfume.marca.toUpperCase(),
             style: TextStyle(
@@ -139,7 +139,6 @@ class _DetallesViewState extends State<DetallesView> {
             ),
           ),
           const SizedBox(height: 4),
-          // NOMBRE
           Text(
             widget.perfume.nombre,
             style: TextStyle(
@@ -151,7 +150,6 @@ class _DetallesViewState extends State<DetallesView> {
           ),
           const SizedBox(height: 12),
           
-          // PRECIO
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -173,7 +171,6 @@ class _DetallesViewState extends State<DetallesView> {
           
           const SizedBox(height: 24),
           
-          // --- FICHA TÉCNICA (GRID) ---
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -186,27 +183,24 @@ class _DetallesViewState extends State<DetallesView> {
               children: [
                 _buildInfoItem(Icons.person_outline, "Para", widget.perfume.sexo, colorTexto, colorDorado),
                 _buildVerticalDivider(),
-                // Asumiendo que tamano es un String, si es int, usa .toString()
-                _buildInfoItem(Icons.straighten, "Tamaño", widget.perfume.tamano, colorTexto, colorDorado),
+                _buildInfoItem(Icons.straighten, "Tamaño", "${widget.perfume.ml} ml", colorTexto, colorDorado),
                 _buildVerticalDivider(),
-                _buildInfoItem(Icons.wb_sunny_outlined, "Clima", widget.perfume.clima, colorTexto, colorDorado),
+                _buildInfoItem(Icons.wb_sunny_outlined, "Clima", "Versátil", colorTexto, colorDorado),
               ],
             ),
           ),
 
           const SizedBox(height: 24),
 
-          // --- NOTAS OLFATIVAS VISUALES ---
           Text(
             "NOTAS OLFATIVAS",
             style: TextStyle(color: colorGrisSuave, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
           ),
           const SizedBox(height: 12),
-          _buildNotesChips(widget.perfume.notas, colorSuperficie, colorTexto),
+          _buildNotesChips(widget.perfume.notasOlfativas, colorSuperficie, colorTexto),
 
           const SizedBox(height: 32),
 
-          // --- ENVÍO ---
           Row(
             children: [
               Icon(Icons.local_shipping_outlined, color: colorDorado, size: 20),
@@ -222,7 +216,6 @@ class _DetallesViewState extends State<DetallesView> {
 
           const SizedBox(height: 32),
 
-          // --- BOTÓN DE COMPRA ---
           SizedBox(
             width: double.infinity,
             child: _estaPagando
@@ -251,8 +244,7 @@ class _DetallesViewState extends State<DetallesView> {
     );
   }
 
-  // --- HELPERS PARA LA NUEVA UI ---
-
+  // --- HELPERS ---
   Widget _buildInfoItem(IconData icon, String label, String value, Color colorTexto, Color colorDorado) {
     return Expanded(
       child: Column(
@@ -261,7 +253,7 @@ class _DetallesViewState extends State<DetallesView> {
           const SizedBox(height: 8),
           Text(
             label.toUpperCase(),
-            style: TextStyle(color: colorTexto.withOpacity(0.5), fontSize: 10, letterSpacing: 0.5),
+            style: TextStyle(color: colorTexto.withAlpha(128), fontSize: 10, letterSpacing: 0.5),
           ),
           const SizedBox(height: 4),
           Text(
@@ -303,7 +295,7 @@ class _DetallesViewState extends State<DetallesView> {
               children: [
                 TextSpan(
                   text: "${entry.key.toUpperCase()}: ",
-                  style: TextStyle(color: colorTexto.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: colorTexto.withAlpha(153), fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 TextSpan(
                   text: entry.value.toString(),
@@ -317,35 +309,57 @@ class _DetallesViewState extends State<DetallesView> {
     );
   }
 
-  // --- IMAGEN OPTIMIZADA (NO SE CORTA) ---
-  Widget _buildImageColumn(
-      BuildContext context, Color colorSuperficie, Color colorFondo) {
-    
+  // --- IMAGEN OPTIMIZADA EN ALTA RESOLUCIÓN ---
+  Widget _buildImageColumn(BuildContext context, Color colorSuperficie, Color colorFondo) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final colorDorado = const Color(0xFFD9AD00);
 
     return Column(
       children: [
         Hero(
           tag: widget.perfume.id,
           child: Container(
-            // Altura dinámica: 55% de la pantalla
             height: screenHeight * 0.55, 
             width: double.infinity,
-            decoration: BoxDecoration(
-              // CAMBIO AQUÍ: Se usa transparente en lugar de colorSuperficie
-              color: Colors.transparent, 
-              image: widget.perfume.imagenUrl.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(widget.perfume.imagenUrl),
-                      fit: BoxFit.contain, // Muestra la botella completa
-                    )
-                  : null,
-            ),
-            child: widget.perfume.imagenUrl.isEmpty
-                ? const Center(
-                    child: Icon(Icons.image_not_supported_outlined,
-                        size: 80, color: const Color(0xFF2A2A2A)))
-                : Container(
+            color: Colors.transparent,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (widget.perfume.imagenUrl.isNotEmpty)
+                  Image.network(
+                    widget.perfume.imagenUrl,
+                    fit: BoxFit.contain,
+                    // No comprimimos la imagen (sin cacheHeight), pero prevenimos el lag
+                    // usando frameBuilder para un fade-in renderizado por GPU
+                    frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                      if (wasSynchronouslyLoaded) return child;
+                      return AnimatedOpacity(
+                        opacity: frame == null ? 0 : 1,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        child: child,
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: colorDorado,
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => 
+                        const Icon(Icons.image_not_supported_outlined, size: 80, color: Color(0xFF2A2A2A)),
+                  )
+                else
+                  const Center(child: Icon(Icons.image_not_supported_outlined, size: 80, color: Color(0xFF2A2A2A))),
+                
+                // Degradado superpuesto para transición suave hacia el fondo
+                Positioned.fill(
+                  child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -358,6 +372,9 @@ class _DetallesViewState extends State<DetallesView> {
                       ),
                     ),
                   ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 32),
@@ -427,6 +444,7 @@ class _DetallesViewState extends State<DetallesView> {
         ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(), // Scroll más suave y natural
         child: Center(
           child: LayoutBuilder(
             builder: (context, constraints) {
